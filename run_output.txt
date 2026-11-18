@@ -1,0 +1,16 @@
+rows=891 | missing: Age=177, Embarked=2 | survival rate=0.384
+train=712 test=179
+
+ Rank                  Model  Accuracy  Precision  Recall     F1  ROC-AUC  Train Acc  CV Acc (5-fold, train)  CV Std
+    1    K-Nearest Neighbors    0.8156     0.8000  0.6957 0.7442   0.8495     0.8511                  0.7977  0.0164
+    2          Decision Tree    0.8045     0.7656  0.7101 0.7368   0.7808     0.9831                  0.7655  0.0163
+    3              SVM (RBF)    0.8156     0.8214  0.6667 0.7360   0.8401     0.8427                  0.8216  0.0247
+    4    Logistic Regression    0.8045     0.7931  0.6667 0.7244   0.8437     0.8076                  0.7963  0.0278
+    5 Naive Bayes (Gaussian)    0.7877     0.7385  0.6957 0.7164   0.8191     0.7907                  0.7936  0.0301
+
+Confusion matrices [[TN, FP],[FN, TP]]:
+  Logistic Regression: [[98, 12], [23, 46]]
+  Decision Tree: [[95, 15], [20, 49]]
+  K-Nearest Neighbors: [[98, 12], [21, 48]]
+  SVM (RBF): [[100, 10], [23, 46]]
+  Naive Bayes (Gaussian): [[93, 17], [21, 48]]
