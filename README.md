@@ -45,29 +45,20 @@ Raw numbers: `results.csv`, `confusion_matrices.json`, `run_output.txt`.
 ### An honest caveat first
 
 The five models are **close**. With only 179 test passengers, the standard error on an accuracy of ~0.80 is about ±3 percentage points, and the gap between best and worst accuracy is 2.8 points (5 passengers). So the ranking above shows tendencies, not a statistically solid ordering, and a different random split could reshuffle the middle of the table. The cross-validation column is a useful second opinion, and it doesn't fully agree with the test ranking (SVM is best on CV, the decision tree worst). The explanations below are hypotheses that fit the data, not results I proved with ablations.
-
 ## Analysis
 
-### Why K-Nearest Neighbors came out on top (and why SVM is a close co-winner)
+**Best model: K-Nearest Neighbors (F1 0.744, ROC-AUC 0.850), with SVM close behind.**
+Survival on the Titanic depends on combinations of features, not on each one separately. For example, women in 1st and 2nd class mostly survived, men in 3rd class mostly didn't, and age mattered differently for each sex. KNN and the RBF SVM are non-linear and local, so they can pick up these combinations by looking at "passengers similar to this one" without being told about them. The data also has only about 9 features after encoding, so distances stay meaningful, and scaling stops `Fare` from dominating the distance. SVM had the best cross-validated accuracy (0.822) and the best precision.
 
-KNN has the best test F1 (0.744) and ROC-AUC (0.850), and ties SVM for best accuracy (0.8156). The RBF SVM has the best cross-validated accuracy (0.822) and the best precision. Both are *local / non-linear* methods, and survival on the Titanic is driven by **interactions** rather than independent effects: women and children in 1st/2nd class survived at very high rates, men in 3rd class at very low rates, and the effect of age depends on sex. A model that groups "passengers like this one" captures these combinations without being told about them.
+**Worst model on the test set: Naive Bayes (accuracy 0.788, F1 0.716).**
+Naive Bayes assumes features are independent once the class is known, and that isn't true here. `Fare`, `Pclass` and `Embarked` are related, so the same information gets counted more than once. The one-hot columns of one variable are also completely dependent on each other, and `Fare` is skewed rather than Gaussian. It also can't model combinations like sex × class. This shows up as more false positives (17, against 10 to 15 for the other models).
 
-The data also suits distance-based methods: after one-hot encoding there are only 9 features, so distances remain meaningful (no curse of dimensionality), and the standardization step puts `Age`, `Fare` and `Pclass` on comparable scales so no single feature dominates the distance. Averaging over 5 neighbors and the smooth RBF kernel both give some noise tolerance, which matters because the data is noisy (survival involved a lot of luck that no feature records).
+**Decision Tree overfit.**
+It scored 98.3% on the training data but only 80.5% on the test set and 76.6% in cross-validation. Without a depth limit it memorizes individual passengers. It also had the lowest ROC-AUC (0.781).
 
-### Why Naive Bayes struggled most on the test set
+**Logistic Regression** was competitive (accuracy 0.8045, AUC 0.844) because sex alone explains most of survival, even though it can't capture interactions without extra features.
 
-Gaussian Naive Bayes has the lowest accuracy (0.788), F1 (0.716) and precision (0.739), mostly from extra false positives (17 versus 10–15 for the others). Its core assumption, that features are independent *given the class*, is badly violated here:
-
-- `Fare` and `Pclass` are strongly correlated (first class pays more), and `Embarked` correlates with class, so the same evidence gets counted more than once.
-- The one-hot columns for a single variable (`Sex_female`/`Sex_male`, the three `Embarked_*` columns) are perfectly dependent on each other.
-- It models every feature as a Gaussian per class, but binary dummies and the heavy-tailed, right-skewed `Fare` aren't Gaussian.
-
-Those mismatches distort its probability estimates. It also cannot represent the Sex × Class × Age interactions that matter most. In its favor, its cross-validated accuracy (0.794) is almost the same as logistic regression and KNN, which is another sign the gaps are small.
-
-### The other two models
-
-- **Decision Tree:** the clearest case of overfitting. Training accuracy is 98.3% against 80.5% on the test set and 76.6% in cross-validation. Left unpruned, it memorizes noise in individual passengers. It also gives the worst ROC-AUC (0.781) because its probabilities come from tiny, nearly pure leaves, which rank passengers poorly even when the hard 0/1 predictions look fine. Its test accuracy (0.8045) probably benefits from a lucky split; I'd expect a depth-limited or pruned tree to do better, though I did not tune it here.
-- **Logistic Regression:** a linear boundary in the (scaled, encoded) features can't express interactions without hand-made interaction terms, yet it is competitive (accuracy 0.8045, AUC 0.844) because `Sex` alone explains most of the signal. It is also the simplest and most interpretable model, with a small train/test gap, so it is the safest choice if explainability matters.
+**Caveat:** the test set has only 179 passengers, so the margin of error is about ±3 points, which is as big as the gap between the models. The ranking is a tendency, not a proven order, and I did not tune any hyperparameters.t and most interpretable model, with a small train/test gap, so it is the safest choice if explainability matters.
 
 ## Takeaways
 
